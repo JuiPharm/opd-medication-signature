@@ -1,0 +1,35 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'gas/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup Clasp Credentials
+        run: |
+          # WARNING: Do not commit actual tokens to the repository.
+          # Use GitHub Secrets to inject these securely.
+          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          echo '${{ secrets.CLASP_JSON }}' > gas/.clasp.json
+
+      - name: Push to GAS
+        run: |
+          cd gas
+          clasp push -f
