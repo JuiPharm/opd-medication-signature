@@ -1,10 +1,30 @@
 const Storage = {
+  _getDayFolder: function(rootFolderId, yyyy, mm, dd) {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "FOLDER_" + rootFolderId + "_" + yyyy + "_" + mm + "_" + dd;
+    const cachedFolderId = cache.get(cacheKey);
+    
+    if (cachedFolderId) {
+      try {
+        return DriveApp.getFolderById(cachedFolderId);
+      } catch (e) {
+        // Fallback if folder was deleted or inaccessible
+      }
+    }
+    
+    const rootFolder = DriveApp.getFolderById(rootFolderId);
+    let yearFolder = this.getOrCreateFolder(rootFolder, yyyy);
+    let monthFolder = this.getOrCreateFolder(yearFolder, mm);
+    let dayFolder = this.getOrCreateFolder(monthFolder, dd);
+    
+    cache.put(cacheKey, dayFolder.getId(), 21600); // cache for 6 hours
+    return dayFolder;
+  },
+  
   saveSignature: function(base64Data, recordId) {
     // 1. Get root folder
     const rootFolderId = PropertiesService.getScriptProperties().getProperty("SIGNATURE_ROOT_FOLDER_ID");
     if (!rootFolderId) throw new Error("Root folder not configured");
-    
-    const rootFolder = DriveApp.getFolderById(rootFolderId);
     
     // 2. Navigate/Create YYYY/MM/DD
     const tz = Config.get("TIMEZONE") || "Asia/Bangkok";
@@ -13,9 +33,7 @@ const Storage = {
     const mm = Utilities.formatDate(date, tz, "MM");
     const dd = Utilities.formatDate(date, tz, "dd");
     
-    let yearFolder = this.getOrCreateFolder(rootFolder, yyyy);
-    let monthFolder = this.getOrCreateFolder(yearFolder, mm);
-    let dayFolder = this.getOrCreateFolder(monthFolder, dd);
+    let dayFolder = this._getDayFolder(rootFolderId, yyyy, mm, dd);
     
     // 3. Decode base64
     const dataParts = base64Data.split(',');

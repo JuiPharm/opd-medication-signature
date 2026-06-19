@@ -31,5 +31,11 @@ function doPost(e) {
     
     return ContentService.createTextOutput(JSON.stringify(errorResponse))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    try {
+      Audit.flush();
+    } catch (e) {
+      console.error("Failed to flush audit logs:", e);
+    }
   }
 }
